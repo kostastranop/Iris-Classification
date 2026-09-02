@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iris Species Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 50%, #f3e5f5 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        /* ── Header ── */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        header .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 999px;
+            padding: 0.3rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #5c6bc0;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+        header h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #388e3c, #1976d2, #7b1fa2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+        header p {
+            margin-top: 0.5rem;
+            color: #546e7a;
+            font-size: 0.95rem;
+        }
+
+        /* ── Main card ── */
+        .card {
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.9);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            width: 100%;
+            max-width: 520px;
+            padding: 2.2rem 2.4rem;
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #37474f;
+            margin-bottom: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card h2::before { content: "🌿"; font-size: 1.1rem; }
+
+        /* ── Form grid ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #546e7a;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .field .hint {
+            font-size: 0.7rem;
+            color: #90a4ae;
+            margin-bottom: 0.35rem;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .field input[type="number"] {
+            width: 100%;
+            padding: 0.6rem 0.85rem;
+            border: 1.5px solid #cfd8dc;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: rgba(255,255,255,0.8);
+            color: #263238;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .field input:focus {
+            border-color: #42a5f5;
+            box-shadow: 0 0 0 3px rgba(66,165,245,0.18);
+        }
+
+        /* ── Submit button ── */
+        .btn-predict {
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #43a047, #1e88e5);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 14px rgba(30,136,229,0.3);
+        }
+        .btn-predict:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(30,136,229,0.35); }
+        .btn-predict:active { transform: translateY(0); }
+
+        /* ── Result ── */
+        .result-box {
+            margin-top: 1.4rem;
+            border-radius: 14px;
+            overflow: hidden;
+            animation: fadeSlideIn 0.4s ease;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-inner {
+            padding: 1.1rem 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Colour themes per species */
+        .result-setosa     { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border: 1.5px solid #a5d6a7; }
+        .result-versicolor { background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 1.5px solid #90caf9; }
+        .result-virginica  { background: linear-gradient(135deg, #f3e5f5, #e1bee7); border: 1.5px solid #ce93d8; }
+        .result-default    { background: linear-gradient(135deg, #f5f5f5, #eeeeee); border: 1.5px solid #e0e0e0; }
+
+        .result-emoji { font-size: 2.2rem; flex-shrink: 0; }
+
+        .result-text .label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #607d8b;
+        }
+        .result-text .species {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #263238;
+            font-style: italic;
+        }
+        .result-text .species span { font-style: normal; color: #546e7a; font-size: 0.9rem; font-weight: 400; }
+
+        /* ── Species info cards ── */
+        .species-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .species-card {
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.85);
+            border-radius: 14px;
+            padding: 1rem 0.9rem;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+        }
+        .species-card .emoji  { font-size: 1.6rem; }
+        .species-card .name   { font-size: 0.82rem; font-weight: 700; font-style: italic; color: #37474f; margin-top: 0.35rem; }
+        .species-card .detail { font-size: 0.7rem; color: #78909c; margin-top: 0.2rem; line-height: 1.4; }
+
+        /* ── Footer ── */
+        footer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #90a4ae;
+            text-align: center;
+        }
+        footer strong { color: #78909c; }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            header h1 { font-size: 1.8rem; }
+            .card { padding: 1.6rem 1.4rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .species-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="badge">Machine Learning · Classification</div>
+        <h1>Iris Species Classifier</h1>
+        <p>Enter flower measurements to predict the iris species</p>
+    </header>
+
+    <div class="card">
+        <h2>Flower Measurements</h2>
+
+        <form action="/predict" method="POST">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="sepal_length">Sepal Length</label>
+                    <div class="hint">cm &nbsp;(4.3 – 7.9)</div>
+                    <input type="number" id="sepal_length" name="sepal_length"
+                           step="0.1" min="4.3" max="7.9"
+                           placeholder="e.g. 5.1" required>
+                </div>
+                <div class="field">
+                    <label for="sepal_width">Sepal Width</label>
+                    <div class="hint">cm &nbsp;(2.0 – 4.4)</div>
+                    <input type="number" id="sepal_width" name="sepal_width"
+                           step="0.1" min="2.0" max="4.4"
+                           placeholder="e.g. 3.5" required>
+                </div>
+                <div class="field">
+                    <label for="petal_length">Petal Length</label>
+                    <div class="hint">cm &nbsp;(1.0 – 6.9)</div>
+                    <input type="number" id="petal_length" name="petal_length"
+                           step="0.1" min="1.0" max="6.9"
+                           placeholder="e.g. 1.4" required>
+                </div>
+                <div class="field">
+                    <label for="petal_width">Petal Width</label>
+                    <div class="hint">cm &nbsp;(0.1 – 2.5)</div>
+                    <input type="number" id="petal_width" name="petal_width"
+                           step="0.1" min="0.1" max="2.5"
+                           placeholder="e.g. 0.2" required>
+                </div>
+            </div>
+
+            <button class="btn-predict" type="submit">&#128269; Predict Species</button>
+
+            {% if result %}
+            {% if result|lower == 'setosa' %}
+            <div class="result-box result-setosa">
+                <div class="result-inner">
+                    <div class="result-emoji">&#127800;</div>
+                    <div class="result-text">
+                        <div class="label">Predicted Species</div>
+                        <div class="species">Iris {{ result }} <span>identified</span></div>
+                    </div>
+                </div>
+            </div>
+            {% elif result|lower == 'versicolor' %}
+            <div class="result-box result-versicolor">
+                <div class="result-inner">
+                    <div class="result-emoji">&#127866;</div>
+                    <div class="result-text">
+                        <div class="label">Predicted Species</div>
+                        <div class="species">Iris {{ result }} <span>identified</span></div>
+                    </div>
+                </div>
+            </div>
+            {% elif result|lower == 'virginica' %}
+            <div class="result-box result-virginica">
+                <div class="result-inner">
+                    <div class="result-emoji">&#128156;</div>
+                    <div class="result-text">
+                        <div class="label">Predicted Species</div>
+                        <div class="species">Iris {{ result }} <span>identified</span></div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="result-box result-default">
+                <div class="result-inner">
+                    <div class="result-emoji">&#127799;</div>
+                    <div class="result-text">
+                        <div class="label">Predicted Species</div>
+                        <div class="species">{{ result }} <span>identified</span></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Reference cards -->
+    <div class="species-grid">
+        <div class="species-card">
+            <div class="emoji">&#127800;</div>
+            <div class="name">Iris setosa</div>
+            <div class="detail">Small petals · Arctic/subarctic regions · Earliest to bloom</div>
+        </div>
+        <div class="species-card">
+            <div class="emoji">&#127866;</div>
+            <div class="name">Iris versicolor</div>
+            <div class="detail">Medium build · North America · Blue-violet blooms</div>
+        </div>
+        <div class="species-card">
+            <div class="emoji">&#128156;</div>
+            <div class="name">Iris virginica</div>
+            <div class="detail">Largest petals · Southeastern US · Deep violet flowers</div>
+        </div>
+    </div>
+
+    <footer>
+        Built with <strong>Flask</strong> &amp; <strong>scikit-learn</strong> &middot; Iris Dataset
+    </footer>
+
+</body>
+</html>
